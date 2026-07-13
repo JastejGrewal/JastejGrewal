@@ -39,6 +39,7 @@
 2. A **closed-loop self-training system** where every human confirm/reject decision by loss-prevention (LP) staff becomes labeled training data, prioritized by active learning, and safely promoted through shadow → canary → staged rollout against a frozen evaluation set.
 3. An **edge-primary hybrid deployment** that keeps raw video in the store and only ships compact features and flagged clips to the cloud — a real, literal answer to the privacy objection that has already caused Veesion legal trouble.
 4. A **published bias-audit program** — a gap the competitive research found *no* competitor currently fills for gesture-based systems (see §2.2) — turned into a market differentiator and a regulatory hedge against an FTC-Rite-Aid-style enforcement action (§5).
+5. **Real brownfield-CCTV compatibility, not just a marketing claim.** "Plugs into your existing cameras" only means something if it actually works at the many stores — especially older/independent ones — still running analog DVRs or budget IP NVRs that never advertise ONVIF compliance. §4.3a defines exactly how far that compatibility goes and where the line is drawn.
 
 ---
 
@@ -99,7 +100,13 @@
 - **Store analytics & ROI dashboard**: shrink-relevant trends by store/zone/time, alert-confirmation rates, and an ROI view management can use to justify the subscription cost (§7).
 - **LP-staff mobile app**: the primary interface for floor staff — alerts, clip review, confirm/reject, in a phone-first UI.
 
-### 3.3 Explicit Non-Features (Stated Boundaries)
+### 3.3 Onboarding: Site Compatibility Survey
+
+Onboarding begins with a formal **site compatibility survey**, run from the site-survey checklist that install partners are certified on (§7): camera count, per-camera resolution and field-of-view assessment against the hard minimum spec (§4.3b), recorder/NVR make and model (to classify the site into an integration tier, §4.3a), and network readiness (uplink quality, whether the cellular-failover option is needed, §4.3).
+
+Stores below the minimum camera spec are not simply turned away — the default motion is a **bundled camera-replacement upsell quote**, fulfilled through the install-partner network (§7), with outright decline as the fallback only if the prospect won't upgrade. This keeps the worst-shrink, oldest-hardware stores addressable without compromising detection accuracy.
+
+### 3.4 Explicit Non-Features (Stated Boundaries)
 
 These boundaries are deliberate product and legal decisions, not omissions:
 
@@ -164,6 +171,8 @@ This design keeps the expensive appearance model and any cloud vision API call i
 - **Privacy/legal**: minimizing raw video leaving the premises is a real GDPR data-minimization advantage, and directly answers the exact concern that produced Veesion's CNIL setback (§2.3, §5) — sending pose-derived features instead of pixels for the vast majority of traffic is a literal instantiation of privacy-by-design, with only flagged/reviewed events ever leaving as short, face-blurred clips.
 - **Reliability**: retail-site internet is often flaky; edge autonomy keeps detection running through an outage and queues events for sync when connectivity returns.
 
+**Offline tolerance is a Phase 1 requirement, not a later-phase hardening task.** The stores most likely to run legacy camera systems are also the stores most likely to have weak or unreliable networking, so the two problems arrive together. From the MVP onward the edge box must: keep detecting with zero connectivity, persist the ring buffer and event/telemetry queue locally across an outage, batch-sync on reconnect, and optionally take a cellular-failover module (4G/LTE USB or M.2 modem) for sites whose primary uplink can't be trusted. This was originally scoped as a Phase 3–4 concern and has been deliberately pulled forward (§4.7).
+
 **Edge hardware.**
 - *Primary/standard tier*: **NVIDIA Jetson Orin family** (Orin Nano/NX for small-to-mid camera counts, AGX Orin for larger stores) — mature TensorRT toolchain, strong multi-stream RTSP decode (NVDEC), and the same class of hardware most production CV/retail-analytics vendors already build on.
 - *Budget tier*: **Hailo-8/Hailo-8L** M.2 accelerator paired with a cheap x86 mini-PC or Raspberry Pi 5 host — excellent $/TOPS and power efficiency, a good fit for small stores and a lever for a lower-cost SMB pricing tier (§6).
@@ -185,6 +194,27 @@ This design keeps the expensive appearance model and any cloud vision API call i
 | Alert routing, dashboard backend, storage | Cloud |
 | Labeling tool, retraining pipeline, model registry | Cloud |
 | Fleet OTA model push | Cloud → Edge |
+
+### 4.3a Legacy Camera Ingestion — the Brownfield Reality
+
+The original draft of this plan silently assumed every store exposes clean RTSP/ONVIF streams. Real retail doesn't. **[Sourced]** Analog CCTV still holds an estimated **30–37% of the installed base** industry-wide as of 2025 (market-report estimates, directional not survey-grade), concentrated in exactly the older/independent stores this plan targets. Field reality breaks into four integration tiers:
+
+| Tier | What's actually installed | How we connect | v1 support |
+|---|---|---|---|
+| **(a) Modern IP** | IP cameras/NVR with ONVIF/RTSP | ONVIF WS-Discovery, plug-and-play | ✅ Yes |
+| **(b) Budget/OEM IP** | White-label NVRs built on Hikvision/Dahua/Uniview chipsets (resold under dozens of brand names), often no advertised ONVIF compliance | **Vendor-URL-pattern fallback library** — documented per-channel RTSP templates (Hikvision `rtsp://…/Streaming/Channels/101`, Dahua `rtsp://…/cam/realmonitor?channel=1&subtype=0`, Uniview `rtsp://…/unicast/c1/s0/live`) tried against detected devices when ONVIF discovery fails | ✅ Yes — software only, no new hardware |
+| **(c) Pure analog** | CVBS/BNC cameras + analog DVR, **no digital output at all** | Requires a physical analog-to-IP encoder ($70–400+/channel **[Sourced, directional]**) and — because most analog DVRs expose only a single cycling/quad "spot monitor" output, not simultaneous per-channel access **[Sourced]** — a coax tap near each camera via a powered distribution amplifier. Materially invasive install. | ❌ **Not in v1.** Referred to the install-partner's own encoder/bridge offering as a prerequisite upgrade; revisit as a bundled resell only with real pilot demand data. |
+| **(d) HD-analog (TVI/CVI/AHD)** | Coax transport but 1080p–4K resolution, usually recorded on a hybrid DVR/XVR | If the hybrid recorder has a network port exposing RTSP (most do), treat as tier (b). Transport medium doesn't matter once resolution and a network path both clear the bar. | ✅ Yes, via the recorder's RTSP |
+
+**Connection flow at install time**: (1) ONVIF WS-Discovery scan of the store LAN → (2) on failure, port-554 probe + vendor-URL-pattern library against detected devices → (3) on failure, site is classified tier (c) and routed to the partner-upgrade path. This is a well-trodden approach — open-source camera-URL databases (iSpyConnect/Agent DVR's crowd-sourced list) and ONVIF discovery libraries already prove it out **[Sourced]** — so the adapter is an engineering task, not a research risk.
+
+**Why exclude tier (c) from v1**: Veesion's own public positioning states RTSP support as its core requirement and recommends IP over analog **[Sourced, needs re-verification — marketing page snippet only]**, implying the incumbent also pushes bridging cost outward. Owning coax-splicing work in v1 would add per-channel hardware COGS, field labor, and liability for physically modifying a store's existing security wiring — for the segment with the lowest willingness to pay. The partner-referral path keeps those stores in the funnel (as camera-upgrade prospects, §3.3) without loading the v1 product with hardware complexity.
+
+### 4.3b Minimum Camera Spec — a Hard Floor, Not a Suggestion
+
+**Policy: HD-analog/1080p-equivalent or better is a hard sales prerequisite.** Sites below it default into the camera-replacement upsell path (§3.3), never a silently-degraded accuracy SLA.
+
+**Why hard, not soft [Sourced]:** legacy standard-def analog formats — CIF (352×288, ~0.1MP), D1 (720×576, ~0.4MP), 960H (976×582, ~0.6MP) — sit in a resolution regime where published action-recognition research reports models "degrade drastically," and low-resolution action recognition remains an open research problem, not something a better model release fixes. Concealment detection is a *small-motion* gesture task: at 0.1–0.6MP, the hands-into-bag signal can be a handful of pixels. Running detection there means shipping low-confidence alerts, which is exactly the wrongful-accusation liability surface §5 and §10 exist to shrink. The practical insight from the research: **resolution tier matters more to model accuracy than IP-vs-analog transport does** — which is why tier (d) HD-analog passes and tier (c)-resolution feeds don't.
 
 ### 4.4 Full Technical Stack
 
@@ -215,9 +245,9 @@ This design keeps the expensive appearance model and any cloud vision API call i
 ```
 ┌─────────────────────────────── STORE PREMISES ───────────────────────────────┐
 │                                                                                 │
-│   [Existing CCTV Cameras] ──RTSP──▶ [Edge Box: Jetson Orin / Hailo-8]         │
-│                                        │                                       │
-│                                        ▼                                       │
+│   [Existing CCTV Cameras / NVR] ──RTSP──▶ [Edge Box: Jetson Orin / Hailo-8]   │
+│    (ONVIF discovery → vendor-URL-        │                                     │
+│     pattern fallback, §4.3a)             ▼                                     │
 │                              DeepStream ingest/decode                          │
 │                                        │                                       │
 │                    ┌───────────────────┼────────────────────┐                 │
@@ -281,7 +311,7 @@ This design keeps the expensive appearance model and any cloud vision API call i
 ### 4.7 Phased Technical Build Roadmap
 
 - **Phase 0 — Data collection & baseline model.** Bootstrap from public datasets (UCF-Crime, DCSASS, NTU RGB+D, Kinetics/COCO) plus staged filming. Build a baseline skeleton-only classifier (pose estimator + ST-GCN), offline evaluation only. Establish the **frozen golden evaluation set now**, before any production feedback exists, so it is never contaminated by the loop.
-- **Phase 1 — Single-camera MVP, human review only, no self-training.** Stand up the edge pipeline on one Jetson dev kit for one camera: person detect+track, pose, single skeleton-based action model, rule engine, basic fusion. Alerting can start as simple as a webhook/Slack notification or a minimal dashboard. Add the confirm/reject UI. Labels accumulate but nothing retrains automatically yet. Goal: validate real-time latency and real-world false-positive tolerance in an actual store.
+- **Phase 1 — Single-camera MVP, human review only, no self-training.** Stand up the edge pipeline on one Jetson dev kit for one camera: person detect+track, pose, single skeleton-based action model, rule engine, basic fusion. Alerting can start as simple as a webhook/Slack notification or a minimal dashboard. Add the confirm/reject UI. Labels accumulate but nothing retrains automatically yet. **Two items pulled forward into this phase from later** (per the legacy-hardware audit): the ONVIF-discovery + vendor-URL-pattern ingestion adapter (§4.3a) — validated against at least one real budget/OEM NVR, not just a lab IP camera — and offline-tolerant edge operation (§4.3) — validated by physically pulling the store uplink and confirming detection continues and events batch-sync on reconnect. Goal: validate real-time latency, real-world false-positive tolerance, *and* brownfield connectivity in an actual store.
 - **Phase 2 — Active learning + retraining pipeline.** Build the data lake (S3 + DVC/lakeFS) and Label Studio integration, implement uncertainty-sampling logic, stand up the scheduled retraining pipeline (MLflow + Airflow/Prefect), and build shadow deployment + golden-set-gated promotion. Still single-model, but the full continuous-learning loop closes end-to-end.
 - **Phase 3 — Multi-model ensemble + edge optimization.** Add the appearance-based branch and object/context detector, build the real fusion meta-model, optionally wire in a cloud vision API as a tertiary signal on flagged clips. Push TensorRT/DeepStream optimization for higher per-box camera throughput. Build canary-rollout infrastructure that works across a multi-store fleet.
 - **Phase 4 — Scale / multi-tenant infra.** Multi-store fleet management via balenaCloud OTA, per-tenant model isolation, multi-region cloud infra, dashboard multi-tenant RBAC, fleet health observability (Prometheus/Grafana), a formalized bias/fairness audit pipeline, and broad INT8 quantization/distillation for cost optimization at scale.
@@ -310,6 +340,7 @@ This is a first-class workstream, not an appendix — because Veesion's own CNIL
 - Explicit "AI-assisted, human-reviewed" marketing language — directly avoiding the "AI-washing" criticism leveled at Veesion (§2.3).
 - No cross-retailer identity sharing or blacklisting — differentiates from Facewatch's model and its associated controversy.
 - E&O and general liability insurance sized specifically for wrongful-accusation exposure, informed by the Rite Aid and facial-recognition wrongful-arrest cases in §10.
+- **Installation liability split**: physical installation is partner-led (§7, §8), so primary liability for physical work — mounting edge boxes, and any modification of a store's existing camera wiring — is contractually assigned to the certified partner installer in the install agreement. Our E&O/liability coverage is scoped to the software/detection/data side. This split only holds if partners are actually vetted, so a **partner certification and insurance-verification program** (license check, COI on file, install-quality audit) is a precondition for any partner performing installs — otherwise an uninsured sub-installer's mistake lands on us anyway.
 
 ---
 
@@ -324,6 +355,7 @@ This is a first-class workstream, not an appendix — because Veesion's own CNIL
 - **One-time install/hardware fee** covering edge box provisioning and camera integration.
 - **Add-on modules** (later phases, per §9): self-checkout fraud detection, and a longer-term Auror-style organized-retail-crime case-sharing network as a potential partnership or acquisition rather than a build-from-scratch effort (§2.2 notes Auror as complementary, not competing).
 - **Motion**: land-and-expand — single-store pilot → regional chain → franchise/national rollout, mirroring the go-to-market sequencing in §7 and the funding-stage mapping in §9 and §11.
+- **Hardware COGS scope** (a deliberate boundary, per §4.3a): our own hardware COGS are limited to the edge box (Jetson/Hailo). Camera replacements and any analog-to-IP encoder hardware a site needs are quoted and fulfilled by the install partner as a **pass-through line item** (referral/revenue-share terms TBD), keeping the margin structure close to SaaS rather than hardware reseller — even though every deployment involves physical installation.
 
 ---
 
@@ -331,6 +363,7 @@ This is a first-class workstream, not an appendix — because Veesion's own CNIL
 
 - **Vertical-first focus**: grocery/convenience and pharmacy first, per the shrink-exposure ranking in §3.1.
 - **Channel partnerships**: CCTV/NVR installers (natural distribution — they already have the customer relationship and the hardware access), POS vendors (integration point for shrink/ROI reporting), and franchise associations (single decision-maker unlocking many locations at once).
+- **The installer relationship is a delivery network, not just a lead channel.** Certified partners run the site compatibility survey (§3.3), perform every physical install, fulfill camera-replacement upsells and tier-(c) analog-bridging upgrades (§4.3a), and carry primary installation liability (§5). Partners are trained and certified on the survey checklist and hardware requirements before their first install. This makes partner recruitment/certification a launch-critical GTM workstream — the product literally cannot deploy without it.
 - **Pilot-driven sales motion**: every new logo starts as a single-store or small-cluster pilot with a published shrink-reduction ROI calculator, feeding directly into the case-study library needed for the next sale.
 - **Timing argument [built on Sourced facts from §2.3]**: Veesion only opened its first US office in 2025 and is still building out that market (targeting ~50 US hires, per its own Series B announcement). That is a real, dated window for a US-first or underserved-vertical entrant to establish reference customers before the incumbent's US presence matures.
 
@@ -344,8 +377,10 @@ This is a first-class workstream, not an appendix — because Veesion's own CNIL
 - Backend/infra engineer (owns the cloud stack, §4.4)
 - Founding full-stack engineer (owns the dashboard/LP-staff app, §3.2)
 
+**Deliberately absent: in-house field-installation headcount.** Installation is partner-led (§5, §7), so the company never builds a truck-roll team. The corresponding hire is instead a **channel/partner-operations role** — owning installer recruitment, certification, insurance verification, and install-quality assurance — needed in Phase 1–2, earlier than a typical channel hire, because the partner network is the delivery arm from the first pilot onward.
+
 **Hiring roadmap**, tied to the phases in §4.7/§9:
-- *Phase 1–2*: add a data-labeling/annotation lead (owns the Label Studio workflow, §4.5) and privacy/compliance counsel (owns the DPIA process, §5) — both need to be in place *before* the first real pilot, not after.
+- *Phase 1–2*: add a data-labeling/annotation lead (owns the Label Studio workflow, §4.5), privacy/compliance counsel (owns the DPIA process, §5), and the channel/partner-operations role above — all three need to be in place *before* the first real pilot, not after.
 - *Phase 3*: add an MLOps engineer (owns the retraining pipeline's shadow/canary/rollout infrastructure, §4.2) and the first sales hire (owns the channel-partnership motion, §7).
 - *Phase 4*: build out customer success (owns pilot-to-scale account expansion) and a dedicated bias-audit/fairness function, formalizing the differentiator from §5 into a standing team responsibility rather than a project.
 
@@ -373,7 +408,9 @@ Mapped directly to the technical phases in §4.7:
 | Competing against a well-funded incumbent (€53M raised) and much-larger-scale Everseen | Vertical-first focus and US-timing window (§7); differentiation on published bias audits and transparency (§1) that neither currently offers |
 | Edge hardware supply chain/cost | Two-tier hardware strategy (Jetson enterprise / Hailo-8 budget, §4.3) to hedge cost and availability |
 | Reputational risk from undisclosed human review ("AI-washing", per the contested StreetPress allegation against Veesion, §2.3) | Explicit "AI-assisted, human-reviewed" marketing from day one (§5) — treat human review as a disclosed feature, not a hidden dependency |
-| Employee misuse of alerts (profiling risk) | Rule-engine exclusion logic scoped to uniform/badge only, never identity (§3.3); audit logging on alert dispositions |
+| Employee misuse of alerts (profiling risk) | Rule-engine exclusion logic scoped to uniform/badge only, never identity (§3.4); audit logging on alert dispositions |
+| Legacy-CCTV compatibility gap shrinks the addressable market or breaks the "existing cameras" promise | ONVIF + vendor-URL-pattern adapter covers tiers (a)/(b)/(d) in software (§4.3a); tier (c) analog and sub-HD sites stay in the funnel via the partner upgrade/upsell path (§3.3) rather than being declined outright |
+| Dependence on install partners for every deployment (quality, speed, coverage) | Partner certification + insurance-verification program before first install (§5); channel/partner-ops hire in Phase 1–2 (§8); install-quality audits as a standing QA function |
 
 ---
 
@@ -404,3 +441,5 @@ Flagged throughout this document, consolidated here for convenience:
 - The FTC's exact order language in the Rite Aid settlement (ftc.gov blocked; substance corroborated by multiple reputable secondary sources — Forbes, NBC News, Cooley, WilmerHale).
 - Veesion's precise current customer/country counts (conflicting marketing figures; no independent audit found).
 - The StreetPress Madagascar story (only accessible via a secondary summary from La Quadrature du Net, not the original article; treat the underlying risk category as real, the specific allegation as unverified).
+- The analog-CCTV installed-base share (30–37%) and per-channel encoder pricing in §4.3a (market-report and vendor-blog estimates, directional not survey-grade; the deepest industry data sits behind IPVM's paywall).
+- Veesion's own analog-vs-IP support posture and RTSP requirement (§4.3a; taken from a marketing-page search snippet — the full page blocked direct fetch).
