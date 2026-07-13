@@ -20,12 +20,13 @@
 10. [Risks & Mitigations](#10-risks--mitigations)
 11. [Financials & Funding Needs](#11-financials--funding-needs)
 12. [Success Metrics / KPIs](#12-success-metrics--kpis)
+- [Sources Requiring Independent Re-Verification Before External Use](#sources-requiring-independent-re-verification-before-external-use)
 
 ---
 
 ## 1. Executive Summary & Vision
 
-**Mission.** Reduce retail shrink by giving stores an AI layer that watches their *existing* CCTV cameras for the physical gestures that precede theft — concealment, bag-stuffing, price-tag swapping, cart-stuffing — and alerts staff in real time, without identifying who anyone is. No facial recognition. No biometric watchlists. No new cameras to install.
+**Mission.** Reduce retail shrink by giving stores an AI layer that watches their *existing* CCTV cameras for the physical gestures that precede theft — concealment, bag-stuffing, price-tag swapping, cart-stuffing — and alerts staff in real time, without identifying who anyone is. No facial recognition. No biometric watchlists. And no rip-and-replace: any camera meeting our published 1080p-equivalent floor (§4.3b) works as-is; below-spec sites get a partner-fulfilled upgrade path (§3.3) rather than a rejection.
 
 **The wedge.** Every serious competitor in this space (see §2) has picked one of two lanes: identity-based systems that recognize *who* someone is (Corsight, Facewatch), or checkout-focused systems that catch theft *at the register* (Everseen). The gesture-detection lane pioneered by Veesion — catching the *behavior* anywhere in the store, before checkout, without identity — is the most privacy-defensible and the most differentiated. This plan doubles down on that lane, but corrects for two real weaknesses the research surfaced in the incumbent's execution:
 
@@ -57,10 +58,10 @@
 
 | Company | HQ / Founded | Approach | Funding | How it differs from our play |
 |---|---|---|---|---|
-| **Veesion** *(the model for this plan)* | Paris; 2018 | Gesture/behavior detection on existing CCTV, no facial recognition | **[Sourced]** €10M Series A (Mar 2022) → €38M Series B (May 2025) = **€53M total** | The direct competitor. See §2.3 for a deep dive. |
+| **Veesion** *(the model for this plan)* | Paris; 2018 | Gesture/behavior detection on existing CCTV, no facial recognition | **[Sourced]** €10M Series A (Mar 2022) → May 2025 Series B package reported as **€53M** (€38M equity + €15M non-dilutive) | The direct competitor. See §2.3 for a deep dive. |
 | **Everseen** | Cork, Ireland; 2007 | Checkout-focused CV (scan-avoidance, product-switching at self-checkout/staffed lanes) | **[Sourced]** ~$84–113M (sources diverge) | Different problem — catches theft *at the register*, not on the shop floor. Much larger claimed footprint: **10,000+ stores, 150,000+ checkouts [Sourced, vendor claim]**. |
 | **Corsight AI** | Israel | **Facial recognition** — identifies repeat offenders and staff/customer "sweethearting" | **[Sourced]** ~$5–8M (small) | Identity-based, the technical opposite of a gesture-only approach. Instructive as a cautionary tale (see Facewatch below). |
-| **Facewatch** | UK | **Facial recognition** watchlist shared across subscriber retailers | N/A found | Same identity-based lane as Corsight, at much larger UK retail scale (Sainsbury's expanding to 200 stores by end of 2026 **[Sourced]**). Subject of an ICO complaint from Big Brother Watch (2022) over opaque enrollment onto shared blacklists — a live controversy as it expands. This is the clearest "what not to become" reference point in the whole competitive set. |
+| **Facewatch** | UK | **Facial recognition** watchlist shared across subscriber retailers | N/A found | Same identity-based lane as Corsight, at much larger UK retail scale (Sainsbury's expanding to 200 stores by end of 2026 **[Sourced]**). Subject of an ICO complaint from Big Brother Watch (2022) over opaque enrollment onto shared blacklists — a live controversy as it expands **[Sourced]**. This is the clearest "what not to become" reference point in the whole competitive set. |
 | **Trigo** | Israel; 2018 | Frictionless/cashierless checkout; added a loss-prevention module | **[Sourced]** $100M raised (2022) | Core business is checkout-free retail, not gesture-based theft alerting — adjacent, not directly competing. Explicitly no facial recognition/biometrics (similar privacy stance to us). Deployed at Tesco (UK), REWE (Germany) **[Sourced]**. |
 | **AiFi** | US | Frictionless checkout via anonymized skeletal tracking, no facial recognition | N/A found | Same adjacent category as Trigo. Powers part of 7-Eleven's checkout-free rollout **[Sourced]**. |
 | **Vaak** | Japan; ~2017–19 | Behavior/gesture-based theft prediction ("VaakEye") | **[Sourced]** ~¥50M (~$450K) from a SoftBank AI fund, seeking ~$9M Series A as of its early press cycle | The closest conceptual match to our approach, but tiny and early — no evidence of a major recent scale-up found. A real signal that the concept works, and that the market hasn't been won yet outside Veesion. |
@@ -71,7 +72,7 @@
 
 ### 2.3 Veesion Deep-Dive: Lessons for This Plan
 
-**Funding & trajectory [Sourced].** Founded 2018 by Thibault David (CEO), Benoît Koenig (COO), and Damien Menigaux (CTO), who met on a joint AI program at HEC Paris/École Polytechnique. Raised €10M in a March 2022 Series A (Odyssée Venture, Verve Ventures, Swiss Immo Lab, Techmind, plus existing investors), then €38M in a May 2025 Series B plus €15M in non-dilutive financing (White Star Capital, Red River West, Bpifrance, Odyssée Ventures, Founders Future) — €53M total. Post-Series-B, co-founder Benoît Koenig relocated to open Veesion's first US office (Florida, targeting ~50 hires), with a stated R&D goal of pushing detection rates above 50% by 2026 and expanding into self-checkout fraud and slip-and-fall detection. Veesion stated it already generated ~10% of revenue from the US *without* a physical presence there pre-expansion — a strong demand signal for the US market this plan targets.
+**Funding & trajectory [Sourced].** Founded 2018 by Thibault David (CEO), Benoît Koenig (COO), and Damien Menigaux (CTO), who met on a joint AI program at HEC Paris/École Polytechnique. Raised €10M in a March 2022 Series A (Odyssée Venture, Verve Ventures, Swiss Immo Lab, Techmind, plus existing investors), then a May 2025 Series B package headlined by press as **€53M** — €38M in equity plus €15M in non-dilutive financing (White Star Capital, Red River West, Bpifrance, Odyssée Ventures, Founders Future). Note the arithmetic: €53M matches only the 2025 package (38+15) and excludes the 2022 Series A, so no single "total funding" figure reconciles across press reports — treat totals as press-reported, not audited (flagged in the end-of-document verification list). Post-Series-B, co-founder Benoît Koenig relocated to open Veesion's first US office (Florida, targeting ~50 hires), with a stated R&D goal of pushing detection rates above 50% by 2026 and expanding into self-checkout fraud and slip-and-fall detection. Veesion stated it already generated ~10% of revenue from the US *without* a physical presence there pre-expansion — a strong demand signal for the US market this plan targets.
 
 **Customer/country claims [Sourced but unverified].** Marketing materials cite ranges from "6,000+ stores in 25 countries" to "5,000+ stores across 50+ countries" depending on the source and date. No independently audited figure was found. Treat any number Veesion publishes as a marketing claim, and do not rely on our own equivalent claims being taken at face value by press or investors either — build toward auditable numbers (§12) from day one.
 
@@ -87,7 +88,7 @@
 
 ### 3.1 Target Segments (ranked by shrink exposure)
 
-1. **Grocery / convenience** — highest shrink rates in the industry, high camera counts, thin margins that make even modest shrink reduction ROI-positive.
+1. **Grocery / convenience** — highest shrink rates in the industry **[Illustrative — commonly asserted industry pattern; verify against NRF sector-level shrink data before external use]**, high camera counts, thin margins that make even modest shrink reduction ROI-positive.
 2. **Pharmacy** — high-value, easily concealed merchandise (the same segment where the Rite Aid facial-recognition scandal occurred, §5 — a segment already primed to want a *privacy-defensible* alternative).
 3. **Apparel** — fitting-room-adjacent concealment patterns, a distinct gesture vocabulary from grocery that the detection pipeline needs to be trained for separately.
 4. **Big-box / general merchandise** — largest camera counts per site, best fit for the enterprise pricing tier (§6).
@@ -245,9 +246,9 @@ The original draft of this plan silently assumed every store exposes clean RTSP/
 ```
 ┌─────────────────────────────── STORE PREMISES ───────────────────────────────┐
 │                                                                                 │
-│   [Existing CCTV Cameras / NVR] ──RTSP──▶ [Edge Box: Jetson Orin / Hailo-8]   │
-│    (ONVIF discovery → vendor-URL-        │                                     │
-│     pattern fallback, §4.3a)             ▼                                     │
+│   [Existing CCTV Cameras / NVR] ──RTSP──▶ [Edge Box: Jetson Orin / Hailo-8]    │
+│    (ONVIF discovery → vendor-URL-      │                                       │
+│     pattern fallback, §4.3a)           ▼                                       │
 │                              DeepStream ingest/decode                          │
 │                                        │                                       │
 │                    ┌───────────────────┼────────────────────┐                 │
@@ -328,7 +329,7 @@ This is a first-class workstream, not an appendix — because Veesion's own CNIL
 - **Illinois BIPA [Sourced].** A gesture-only, non-identifying system has a stronger argument for falling outside BIPA's "biometric identifier" definition than facial-recognition competitors — Target (motion to dismiss denied, Nov 2024) and Home Depot (sued Aug 2025) are both currently defending BIPA suits over in-store facial recognition. This is an argument to get formally legally reviewed, not an assumption to build the company on. Note also that a 2024 BIPA amendment capped per-person damages at one violation (max $5,000/person) rather than per-scan, meaningfully reducing class-action exposure industry-wide — BIPA filings dropped from 427 cases in 2024 to 150 in 2025 as a result.
 - **EU AI Act [Sourced].** Article 5's real-time biometric identification ban is scoped to law-enforcement use, so commercial retail use is likely not directly prohibited. However, "biometric-based" categorization is defined broadly enough (including behavioral signals) that **Annex III high-risk classification** — triggering conformity assessment, technical documentation, and post-market monitoring duties — is a live, unsettled risk for gesture-based systems. Monitor EU Commission guidance actively; this is explicitly an open interpretive question, not a settled safe harbor. Penalties for Article 5 violations run up to €35M or 7% of global annual turnover.
 - **CCPA/CPRA (California) [Sourced, behavioral summary — verify exact statutory text with counsel].** California's definition of biometric information explicitly includes behavioral characteristics such as gait patterns, and CPRA classes biometric information processed for unique identification as "sensitive personal information," triggering added consumer rights (limit-use, access, deletion, portability). Video-derived behavioral data captured without consumer consent is not "publicly available" and remains covered personal information.
-- **FTC precedent — Rite Aid [Sourced].** The FTC's December 2023 settlement with Rite Aid — its first algorithmic-discrimination enforcement action — banned Rite Aid from facial-recognition surveillance for 5 years and ordered destruction of all collected photos/videos plus instructions to third parties to delete derived models. The FTC's underlying allegation: Rite Aid deployed for nearly a decade without testing for accuracy or bias, and Black and Asian customers were more likely to be misidentified, leading to wrongful shoplifting accusations. **Even for a non-facial-recognition product, the lesson is direct**: pre-deployment bias testing and documented accuracy validation are a regulatory necessity, not a nice-to-have — the FTC's theory of harm was about undisclosed, untested algorithmic decision-making causing consumer harm, a theory that is not inherently limited to facial recognition.
+- **FTC precedent — Rite Aid [Sourced, Needs re-verification — primary FTC order not fetched; substance corroborated by multiple reputable secondary sources].** The FTC's December 2023 settlement with Rite Aid — its first algorithmic-discrimination enforcement action — banned Rite Aid from facial-recognition surveillance for 5 years and ordered destruction of all collected photos/videos plus instructions to third parties to delete derived models. The FTC's underlying allegation: Rite Aid deployed for nearly a decade without testing for accuracy or bias, and Black and Asian customers were more likely to be misidentified, leading to wrongful shoplifting accusations. **Even for a non-facial-recognition product, the lesson is direct**: pre-deployment bias testing and documented accuracy validation are a regulatory necessity, not a nice-to-have — the FTC's theory of harm was about undisclosed, untested algorithmic decision-making causing consumer harm, a theory that is not inherently limited to facial recognition.
 - **Bias research gap [Sourced].** No NIST-equivalent, peer-reviewed bias study specifically testing gesture/movement-based shoplifting-prediction algorithms (as distinct from facial recognition) was found. This is both a risk (untested territory that could surface in future journalism the way facial-recognition bias did, per the NIST FRVT Part 3 findings on facial recognition) and, per §1/§2.2, a genuine differentiation opportunity: commit publicly to bias testing/audits that no competitor currently performs.
 
 **Company compliance commitments built into this plan:**
@@ -405,12 +406,13 @@ Mapped directly to the technical phases in §4.7:
 | GDPR/biometric-classification risk — proven, not hypothetical, per Veesion's own CNIL ruling (§2.3) | Mandatory DPIA before every jurisdiction's pilot; edge-primary architecture minimizing raw data transmission (§4.3, §5) |
 | Bias/discrimination and wrongful-accusation liability (Rite Aid precedent, §5) | Published third-party bias audits; golden-set-gated model promotion (§4.2); redress process for wrongly flagged customers |
 | Data breach exposure on stored clips | Strict retention limits with automated purge; face-blur pipeline before any clip leaves a store (§4.5, §5) |
-| Competing against a well-funded incumbent (€53M raised) and much-larger-scale Everseen | Vertical-first focus and US-timing window (§7); differentiation on published bias audits and transparency (§1) that neither currently offers |
+| Competing against a well-funded incumbent (a €53M 2025 financing package, §2.3) and much-larger-scale Everseen | Vertical-first focus and US-timing window (§7); differentiation on published bias audits and transparency (§1) that neither currently offers |
 | Edge hardware supply chain/cost | Two-tier hardware strategy (Jetson enterprise / Hailo-8 budget, §4.3) to hedge cost and availability |
 | Reputational risk from undisclosed human review ("AI-washing", per the contested StreetPress allegation against Veesion, §2.3) | Explicit "AI-assisted, human-reviewed" marketing from day one (§5) — treat human review as a disclosed feature, not a hidden dependency |
 | Employee misuse of alerts (profiling risk) | Rule-engine exclusion logic scoped to uniform/badge only, never identity (§3.4); audit logging on alert dispositions |
 | Legacy-CCTV compatibility gap shrinks the addressable market or breaks the "existing cameras" promise | ONVIF + vendor-URL-pattern adapter covers tiers (a)/(b)/(d) in software (§4.3a); tier (c) analog and sub-HD sites stay in the funnel via the partner upgrade/upsell path (§3.3) rather than being declined outright |
 | Dependence on install partners for every deployment (quality, speed, coverage) | Partner certification + insurance-verification program before first install (§5); channel/partner-ops hire in Phase 1–2 (§8); install-quality audits as a standing QA function |
+| Unreliable store internet interrupts alerting and delays event sync — most likely at exactly the legacy-hardware sites this plan targets | Offline-tolerant edge operation as a Phase 1 requirement (§4.3, §4.7): detection continues with zero connectivity, ring buffer and event queue persist locally, batch sync on reconnect, optional cellular failover for untrusted uplinks |
 
 ---
 
@@ -437,7 +439,9 @@ Mapped directly to the technical phases in §4.7:
 ## Sources Requiring Independent Re-Verification Before External Use
 
 Flagged throughout this document, consolidated here for convenience:
-- NRF's exact shrink dollar/percentage figures in the 2025 "Impact of Theft & Violence" report (nrf.com blocked direct fetch during research).
+- NRF's exact shrink dollar/percentage figures — both the 2023 National Retail Security Survey ($112.1B / 1.6% of sales, FY2022) and the 2025 "Impact of Theft & Violence" report (nrf.com blocked direct fetch during research; all figures via secondary reporting).
+- Veesion's funding totals (the press-reported "€53M" covers only the May 2025 package of €38M equity + €15M non-dilutive and excludes the 2022 €10M Series A; no reconciled total-funding figure was found — see §2.3).
+- The CCPA/CPRA statutory definitions of biometric information in §5 (behavioral summary from secondary guides; verify exact statutory text with privacy counsel).
 - The FTC's exact order language in the Rite Aid settlement (ftc.gov blocked; substance corroborated by multiple reputable secondary sources — Forbes, NBC News, Cooley, WilmerHale).
 - Veesion's precise current customer/country counts (conflicting marketing figures; no independent audit found).
 - The StreetPress Madagascar story (only accessible via a secondary summary from La Quadrature du Net, not the original article; treat the underlying risk category as real, the specific allegation as unverified).
