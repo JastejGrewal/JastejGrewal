@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel — Loss Prevention Dashboard</title>
+<style>
+  :root { --bg:#0f1216; --card:#171c22; --text:#e6ebf0; --dim:#8a94a0;
+          --alert:#e5484d; --soft:#f5a623; --ok:#30a46c; --line:#242b33; }
+  * { box-sizing:border-box; margin:0; }
+  body { font:14px/1.5 system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); padding:24px; }
+  h1 { font-size:18px; margin-bottom:4px; }
+  .sub { color:var(--dim); margin-bottom:20px; font-size:13px; }
+  .stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 18px; min-width:120px; }
+  .stat .n { font-size:22px; font-weight:600; }
+  .stat .l { color:var(--dim); font-size:12px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+  th { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  tr:last-child td { border-bottom:none; }
+  .tier { font-weight:600; padding:2px 8px; border-radius:99px; font-size:12px; }
+  .tier.alert { background:rgba(229,72,77,.15); color:var(--alert); }
+  .tier.soft  { background:rgba(245,166,35,.15); color:var(--soft); }
+  .tier.log   { background:rgba(138,148,160,.15); color:var(--dim); }
+  button { background:transparent; border:1px solid var(--line); color:var(--text); border-radius:6px;
+           padding:4px 10px; cursor:pointer; font-size:12px; margin-right:6px; }
+  button:hover { border-color:var(--dim); }
+  button.confirm:hover { border-color:var(--alert); color:var(--alert); }
+  button.reject:hover  { border-color:var(--ok); color:var(--ok); }
+  .verdict { font-size:12px; font-weight:600; }
+  .verdict.confirmed { color:var(--alert); }
+  .verdict.false_alarm { color:var(--ok); }
+  .verdict.unsure { color:var(--soft); }
+  .empty { color:var(--dim); padding:24px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Sentinel — Loss Prevention Dashboard</h1>
+<div class="sub">AI-assisted, human-reviewed. Alerts are gesture-based only; no identity data is collected.</div>
+
+<div class="stats" id="stats"></div>
+
+<h1 style="font-size:15px;margin-bottom:8px">Live alerts</h1>
+<table>
+  <thead><tr><th>Time</th><th>Camera</th><th>Track</th><th>Tier</th><th>Score</th><th>Context</th><th>Disposition</th></tr></thead>
+  <tbody id="alerts"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+</table>
+
+<script>
+async function feedback(eventId, verdict) {
+  await fetch(`/api/v1/alerts/${eventId}/feedback`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({verdict, reviewer: 'dashboard'})
+  });
+  refresh();
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function refresh() {
+  const [alerts, stats] = await Promise.all([
+    fetch('/api/v1/alerts?limit=50').then(r => r.json()),
+    fetch('/api/v1/stats').then(r => r.json()),
+  ]);
+
+  const tiers = stats.events_by_tier || {};
+  const verdicts = stats.feedback_by_verdict || {};
+  document.getElementById('stats').innerHTML = [
+    ['Alerts', tiers.alert || 0], ['Soft', tiers.soft || 0], ['Logged', tiers.log || 0],
+    ['Confirmed', verdicts.confirmed || 0], ['False alarms', verdicts.false_alarm || 0],
+  ].map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const tbody = document.getElementById('alerts');
+  if (!alerts.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No alerts yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = alerts.map(a => {
+    const time = new Date(a.created_ts * 1000).toLocaleTimeString();
+    const disposition = a.feedback
+      ? `<span class="verdict ${esc(a.feedback.verdict)}">${esc(a.feedback.verdict.replace('_',' '))}</span>`
+      : `<button class="confirm" onclick="feedback('${esc(a.event_id)}','confirmed')">Confirm theft</button>` +
+        `<button class="reject" onclick="feedback('${esc(a.event_id)}','false_alarm')">False alarm</button>` +
+        `<button onclick="feedback('${esc(a.event_id)}','unsure')">Unsure</button>`;
+    return `<tr>
+      <td>${time}</td><td>${esc(a.camera_id)}</td><td>#${a.track_id}</td>
+      <td><span class="tier ${esc(a.tier)}">${esc(a.tier)}</span></td>
+      <td>${a.fused_score.toFixed(2)}</td>
+      <td>${(a.rule_flags || []).map(esc).join(', ') || '—'}</td>
+      <td>${disposition}</td>
+    </tr>`;
+  }).join('');
+}
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

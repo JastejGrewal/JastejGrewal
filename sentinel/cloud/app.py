@@ -1,0 +1,109 @@
+"""Cloud API: event ingestion, alert routing, feedback, review queue, dashboard.
+
+Run: uvicorn sentinel.cloud.app:app --port 8000
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
+
+from sentinel.common.events import AlertTier, FeedbackVerdict
+
+from .active_learning import prioritize
+from .store import CloudStore
+
+app = FastAPI(title="Sentinel Cloud", version="0.1.0")
+_store = CloudStore(db_path=os.environ.get("SENTINEL_DB", ":memory:"))
+
+
+def get_store() -> CloudStore:
+    return _store
+
+
+class ClipRefIn(BaseModel):
+    camera_id: str
+    start_ts: float
+    end_ts: float
+    frame_count: int
+
+
+class EventIn(BaseModel):
+    event_id: str
+    store_id: str
+    camera_id: str
+    track_id: int
+    tier: AlertTier
+    fused_score: float = Field(ge=0.0, le=1.0)
+    action_score: float = Field(ge=0.0, le=1.0)
+    rule_flags: list[str] = []
+    window_start_ts: float = 0.0
+    window_end_ts: float = 0.0
+    created_ts: float = 0.0
+    clip: ClipRefIn | None = None
+
+
+class FeedbackIn(BaseModel):
+    verdict: FeedbackVerdict
+    reason: str | None = None
+    reviewer: str | None = None
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.post("/api/v1/events", status_code=201)
+def ingest_event(event: EventIn) -> dict:
+    payload = event.model_dump()
+    payload["tier"] = event.tier.value
+    inserted = get_store().insert_event(payload)
+    return {"event_id": event.event_id, "inserted": inserted}
+
+
+@app.get("/api/v1/events")
+def list_events(tier: str | None = Query(default=None), limit: int = Query(default=100, le=1000)) -> list[dict]:
+    return get_store().list_events(tier=tier, limit=limit)
+
+
+@app.get("/api/v1/alerts")
+def list_alerts(limit: int = Query(default=100, le=1000)) -> list[dict]:
+    alerts = get_store().list_events(tier=AlertTier.ALERT.value, limit=limit)
+    for alert in alerts:
+        alert["feedback"] = get_store().get_feedback(alert["event_id"])
+    return alerts
+
+
+@app.post("/api/v1/alerts/{event_id}/feedback")
+def submit_feedback(event_id: str, feedback: FeedbackIn) -> dict:
+    ok = get_store().add_feedback(
+        event_id, feedback.verdict.value, feedback.reason, feedback.reviewer
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="unknown event_id")
+    return {"event_id": event_id, "verdict": feedback.verdict.value}
+
+
+@app.get("/api/v1/review-queue")
+def review_queue(limit: int = Query(default=50, le=500)) -> list[dict]:
+    store = get_store()
+    items = prioritize(store.unreviewed_events(), store.labeled_examples())
+    return [
+        {"priority": it.priority, "reasons": it.reasons, "event": it.event}
+        for it in items[:limit]
+    ]
+
+
+@app.get("/api/v1/stats")
+def stats() -> dict:
+    return get_store().stats()
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard() -> str:
+    return (Path(__file__).parent / "static" / "dashboard.html").read_text()
