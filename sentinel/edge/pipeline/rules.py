@@ -45,7 +45,6 @@ class RuleVerdict:
 @dataclass
 class _TrackState:
     first_seen_ts: float
-    last_bbox: BBox | None = None
 
 
 class RuleEngine:
@@ -62,7 +61,6 @@ class RuleEngine:
         is_employee: bool = False,
     ) -> RuleVerdict:
         state = self._tracks.setdefault(track_id, _TrackState(first_seen_ts=ts))
-        state.last_bbox = bbox
 
         verdict = RuleVerdict()
         center = bbox.center()

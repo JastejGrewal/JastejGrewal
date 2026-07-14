@@ -49,17 +49,32 @@
 
 <script>
 async function feedback(eventId, verdict) {
-  await fetch(`/api/v1/alerts/${eventId}/feedback`, {
+  const res = await fetch(`/api/v1/alerts/${encodeURIComponent(eventId)}/feedback`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({verdict, reviewer: 'dashboard'})
   });
+  if (!res.ok) {
+    alert(`Could not record disposition (HTTP ${res.status}). Please retry.`);
+    return;
+  }
   refresh();
 }
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+// Event delegation: event ids travel in data-attributes (set by the browser
+// from the DOM, never re-parsed as HTML/JS), so a hostile event_id from a
+// compromised edge box cannot break out into script — unlike interpolating it
+// into an inline onclick handler, where HTML-entity escaping is decoded back
+// to live quotes before the JS parser runs.
+document.getElementById('alerts').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-event-id]');
+  if (!btn) return;
+  feedback(btn.dataset.eventId, btn.dataset.verdict);
+});
 
 async function refresh() {
   const [alerts, stats] = await Promise.all([
@@ -81,11 +96,12 @@ async function refresh() {
   }
   tbody.innerHTML = alerts.map(a => {
     const time = new Date(a.created_ts * 1000).toLocaleTimeString();
+    const id = esc(a.event_id);
     const disposition = a.feedback
       ? `<span class="verdict ${esc(a.feedback.verdict)}">${esc(a.feedback.verdict.replace('_',' '))}</span>`
-      : `<button class="confirm" onclick="feedback('${esc(a.event_id)}','confirmed')">Confirm theft</button>` +
-        `<button class="reject" onclick="feedback('${esc(a.event_id)}','false_alarm')">False alarm</button>` +
-        `<button onclick="feedback('${esc(a.event_id)}','unsure')">Unsure</button>`;
+      : `<button class="confirm" data-event-id="${id}" data-verdict="confirmed">Confirm theft</button>` +
+        `<button class="reject" data-event-id="${id}" data-verdict="false_alarm">False alarm</button>` +
+        `<button data-event-id="${id}" data-verdict="unsure">Unsure</button>`;
     return `<tr>
       <td>${time}</td><td>${esc(a.camera_id)}</td><td>#${a.track_id}</td>
       <td><span class="tier ${esc(a.tier)}">${esc(a.tier)}</span></td>

@@ -36,6 +36,7 @@ def _run_pipeline(include_employee=False):
     all_events = []
     for frame in store_scenario(n_frames=120, include_employee=include_employee):
         all_events.extend(pipeline.process_frame(frame))
+    all_events.extend(pipeline.finalize())
     return pipeline, all_events
 
 

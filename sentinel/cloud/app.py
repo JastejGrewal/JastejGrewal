@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -59,24 +59,26 @@ def health() -> dict:
 
 
 @app.post("/api/v1/events", status_code=201)
-def ingest_event(event: EventIn) -> dict:
+def ingest_event(event: EventIn, response: Response) -> dict:
     payload = event.model_dump()
     payload["tier"] = event.tier.value
     inserted = get_store().insert_event(payload)
+    # Idempotent re-delivery (normal on outbox reconnect) is not a new create.
+    response.status_code = 201 if inserted else 200
     return {"event_id": event.event_id, "inserted": inserted}
 
 
 @app.get("/api/v1/events")
-def list_events(tier: str | None = Query(default=None), limit: int = Query(default=100, le=1000)) -> list[dict]:
+def list_events(
+    tier: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+) -> list[dict]:
     return get_store().list_events(tier=tier, limit=limit)
 
 
 @app.get("/api/v1/alerts")
-def list_alerts(limit: int = Query(default=100, le=1000)) -> list[dict]:
-    alerts = get_store().list_events(tier=AlertTier.ALERT.value, limit=limit)
-    for alert in alerts:
-        alert["feedback"] = get_store().get_feedback(alert["event_id"])
-    return alerts
+def list_alerts(limit: int = Query(default=100, ge=1, le=1000)) -> list[dict]:
+    return get_store().list_alerts_with_feedback(limit=limit)
 
 
 @app.post("/api/v1/alerts/{event_id}/feedback")
@@ -90,7 +92,7 @@ def submit_feedback(event_id: str, feedback: FeedbackIn) -> dict:
 
 
 @app.get("/api/v1/review-queue")
-def review_queue(limit: int = Query(default=50, le=500)) -> list[dict]:
+def review_queue(limit: int = Query(default=50, ge=1, le=500)) -> list[dict]:
     store = get_store()
     items = prioritize(store.unreviewed_events(), store.labeled_examples())
     return [

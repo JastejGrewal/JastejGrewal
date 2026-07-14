@@ -94,6 +94,35 @@ class CloudStore:
                 ).fetchall()
         return [self._row_to_event(r) for r in rows]
 
+    def list_alerts_with_feedback(self, limit: int = 100) -> list[dict]:
+        """ALERT-tier events with their feedback joined in one query (no N+1)."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT e.*, f.verdict AS f_verdict, f.reason AS f_reason,"
+                " f.reviewer AS f_reviewer, f.created_ts AS f_created_ts"
+                " FROM events e LEFT JOIN feedback f ON f.event_id = e.event_id"
+                " WHERE e.tier = 'alert' ORDER BY e.received_ts DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        out = []
+        for row in rows:
+            event = self._row_to_event(row)
+            for key in ("f_verdict", "f_reason", "f_reviewer", "f_created_ts"):
+                event.pop(key, None)
+            event["feedback"] = (
+                {
+                    "event_id": event["event_id"],
+                    "verdict": row["f_verdict"],
+                    "reason": row["f_reason"],
+                    "reviewer": row["f_reviewer"],
+                    "created_ts": row["f_created_ts"],
+                }
+                if row["f_verdict"] is not None
+                else None
+            )
+            out.append(event)
+        return out
+
     def get_event(self, event_id: str) -> dict | None:
         with self._lock:
             row = self._conn.execute(

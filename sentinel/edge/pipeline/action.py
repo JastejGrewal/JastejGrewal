@@ -35,15 +35,11 @@ class ActionClassifier(Protocol):
     def score_window(self, samples: list[PoseSample]) -> ActionScore | None: ...
 
 
-def _dist(a: tuple[float, float], b: tuple[float, float]) -> float:
-    return math.hypot(a[0] - b[0], a[1] - b[1])
-
-
 def _wrist_hip_gap(sample: PoseSample) -> float:
     """Min distance from either wrist to either hip: 'hand at stow position'."""
     wrists = [sample.kp(Keypoint.LEFT_WRIST), sample.kp(Keypoint.RIGHT_WRIST)]
     hips = [sample.kp(Keypoint.LEFT_HIP), sample.kp(Keypoint.RIGHT_HIP)]
-    return min(_dist(w, h) for w in wrists for h in hips)
+    return min(math.dist(w, h) for w in wrists for h in hips)
 
 
 def _reach_extent(sample: PoseSample) -> float:
@@ -51,7 +47,7 @@ def _reach_extent(sample: PoseSample) -> float:
     wrists = [sample.kp(Keypoint.LEFT_WRIST), sample.kp(Keypoint.RIGHT_WRIST)]
     ls, rs = sample.kp(Keypoint.LEFT_SHOULDER), sample.kp(Keypoint.RIGHT_SHOULDER)
     mid = ((ls[0] + rs[0]) / 2, (ls[1] + rs[1]) / 2)
-    return max(_dist(w, mid) for w in wrists)
+    return max(math.dist(w, mid) for w in wrists)
 
 
 class KinematicConcealmentClassifier:

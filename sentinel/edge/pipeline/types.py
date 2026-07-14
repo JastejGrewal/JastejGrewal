@@ -65,6 +65,10 @@ class Detection:
 
     bbox: BBox
     confidence: float
+    # Uniform/badge visual cue for false-positive suppression (blueprint §3.4)
+    # — set by the detector or a dedicated uniform classifier, NEVER identity.
+    # This is the contract the real employee-suppression backend plugs into.
+    is_employee: bool = False
     # Carried through from synthetic ground truth so downstream synthetic
     # backends can look up the actor; never populated by real detectors.
     actor_ref: object | None = None

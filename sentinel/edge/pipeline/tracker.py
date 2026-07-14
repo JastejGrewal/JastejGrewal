@@ -16,7 +16,6 @@ from .types import BBox, Detection, TrackedPerson
 class _Track:
     track_id: int
     bbox: BBox
-    last_seen_ts: float
     misses: int = 0
 
 
@@ -26,8 +25,13 @@ class IoUTracker:
         self._max_misses = max_misses
         self._tracks: dict[int, _Track] = {}
         self._next_id = 1
+        # Track ids aged out during the most recent update(), so the
+        # orchestrator can release the per-track state those ids own
+        # (fixes the unbounded-growth leak in a 24/7 process).
+        self.dropped_ids: list[int] = []
 
     def update(self, detections: list[Detection], ts: float) -> list[TrackedPerson]:
+        self.dropped_ids = []
         # Greedy matching: highest-IoU (track, detection) pairs first.
         pairs: list[tuple[float, int, int]] = []
         for ti, track in self._tracks.items():
@@ -52,18 +56,19 @@ class IoUTracker:
             if di in assignments:
                 tid = assignments[di]
                 self._tracks[tid].bbox = det.bbox
-                self._tracks[tid].last_seen_ts = ts
                 self._tracks[tid].misses = 0
             else:
                 tid = self._next_id
                 self._next_id += 1
-                self._tracks[tid] = _Track(track_id=tid, bbox=det.bbox, last_seen_ts=ts)
+                self._tracks[tid] = _Track(track_id=tid, bbox=det.bbox)
             out.append(TrackedPerson(track_id=tid, detection=det, ts=ts))
 
         # Age out unmatched tracks.
+        live_ids = {p.track_id for p in out}
         for tid in list(self._tracks):
-            if tid not in {t.track_id for t in out}:
+            if tid not in live_ids:
                 self._tracks[tid].misses += 1
                 if self._tracks[tid].misses > self._max_misses:
                     del self._tracks[tid]
+                    self.dropped_ids.append(tid)
         return out

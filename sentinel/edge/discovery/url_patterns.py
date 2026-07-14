@@ -19,7 +19,6 @@ class VendorFamily:
     name: str
     # Template variables: user, password, host, port, channel (1-based), stream (0-based)
     template: str
-    default_port: int = 554
 
 
 VENDOR_FAMILIES: tuple[VendorFamily, ...] = (

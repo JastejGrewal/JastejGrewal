@@ -34,10 +34,6 @@ def _features(event: dict) -> tuple[float, float, float]:
     )
 
 
-def _distance(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
-
-
 def prioritize(
     unreviewed: list[dict],
     labeled: list[dict],
@@ -45,6 +41,8 @@ def prioritize(
     negative_sample_rate: float = 0.05,
 ) -> list[QueueItem]:
     """Rank unreviewed events for human review, highest label-value first."""
+    if not 0.0 < boundary_center < 1.0:
+        raise ValueError("boundary_center must be in (0, 1)")
     centroids: list[tuple[float, float, float]] = []
     if labeled:
         by_verdict: dict[str, list[tuple[float, float, float]]] = {}
@@ -67,7 +65,7 @@ def prioritize(
         # Novelty: distance to the nearest labeled-class centroid.
         novelty = 0.0
         if centroids:
-            novelty = min(_distance(_features(event), c) for c in centroids)
+            novelty = min(math.dist(_features(event), c) for c in centroids)
             novelty = min(1.0, novelty)  # feature space is roughly unit-scaled
             if novelty > 0.3:
                 reasons.append("novelty")

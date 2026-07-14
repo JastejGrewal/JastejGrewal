@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         pipeline.process_frame(frame)
         # Drain opportunistically, as the real edge loop does.
         outbox.drain(publisher.publish)
+    # Flush any alert still awaiting its post-roll clip at end of stream.
+    pipeline.finalize()
 
     # Final drain with brief retries for anything still queued.
     for _ in range(5):

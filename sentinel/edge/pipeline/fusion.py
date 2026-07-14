@@ -62,21 +62,26 @@ class FusionEngine:
     def decide(self, action: ActionScore, rules: RuleVerdict) -> FusedDecision:
         fused = self._fuse(action, rules)
 
+        # Record EVERY scored window in the rolling history, counting a
+        # suppressed window as non-positive. This keeps hysteresis anchored to
+        # recent wall-clock windows: a track that dwells in a suppressed zone
+        # decays its history to zero instead of freezing stale positives that
+        # would otherwise fire an instant ALERT the moment it leaves the zone.
+        positive = (not rules.suppressed) and fused >= self.soft_threshold
+        history = self._history.setdefault(
+            action.track_id, deque(maxlen=self.hysteresis_m)
+        )
+        history.append(positive)
+        positives = sum(history)
+
         if rules.suppressed:
             tier = AlertTier.LOG
+        elif fused >= self.alert_threshold and positives >= self.hysteresis_n:
+            tier = AlertTier.ALERT
+        elif fused >= self.soft_threshold and positives >= self.hysteresis_n:
+            tier = AlertTier.SOFT
         else:
-            history = self._history.setdefault(
-                action.track_id, deque(maxlen=self.hysteresis_m)
-            )
-            history.append(fused >= self.soft_threshold)
-            positives = sum(history)
-
-            if fused >= self.alert_threshold and positives >= self.hysteresis_n:
-                tier = AlertTier.ALERT
-            elif fused >= self.soft_threshold and positives >= self.hysteresis_n:
-                tier = AlertTier.SOFT
-            else:
-                tier = AlertTier.LOG
+            tier = AlertTier.LOG
 
         return FusedDecision(
             track_id=action.track_id,

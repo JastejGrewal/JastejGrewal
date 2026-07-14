@@ -23,10 +23,25 @@ what is **implemented** vs. **planned**; keep it in sync as stages evolve.
 2. **Every scored window becomes a `DetectionEvent`**, including LOG tier.
    The active-learning selector depends on confident negatives existing.
 3. **Suppression wins.** If the rule engine sets `suppressed`, fusion may not
-   emit above LOG regardless of score. Employee suppression keys on uniform/
-   badge visual cues only — never identity (blueprint §3.4).
+   emit above LOG regardless of score. Employee suppression keys on
+   `Detection.is_employee` (a uniform/badge visual cue) — never identity
+   (blueprint §3.4). A suppressed window is still recorded in the hysteresis
+   history as non-positive, so a track dwelling in a suppressed zone *decays*
+   its history rather than freezing stale positives that would fire the instant
+   it leaves the zone.
 4. **Hysteresis before escalation.** A single positive window never alerts;
    `FusionEngine.hysteresis_n` of the last `hysteresis_m` must be positive.
+5. **Per-track state is released on track death.** `EdgePipeline._release_track`
+   is called for every id in `IoUTracker.dropped_ids`, clearing the pose
+   window, stride counter, actor map, and the rule/fusion per-track state.
+   Without this the process leaks one deque + several dict entries per shopper
+   forever — do not add new per-track dicts without wiring them into
+   `_release_track`.
+6. **Alert clips are extracted with a delay.** Clip extraction for an ALERT is
+   deferred by `clip_post_roll_s` (via `_pending_alerts`), because the post-roll
+   frames don't exist in the ring buffer at decision time. `finalize()` flushes
+   any alert still awaiting post-roll at end of stream/shift — callers driving
+   the pipeline to completion must call it.
 
 ## Kinematic classifier: known limits (read before tuning)
 
@@ -41,6 +56,17 @@ a sustained wrist-at-hip dwell (stow). Known blind spots, accepted for MVP:
 
 These are model-replacement work (Phase 0 data → trained ST-GCN), not
 threshold-tuning work. Do not chase them with heuristics.
+
+**Sliding-window overlap and hysteresis.** With `window_size=20` and
+`window_stride=5`, consecutive scored windows share 15 frames, so a single
+sustained gesture is intentionally re-scored across several overlapping
+windows — that is what lets `hysteresis_n` positives accumulate. The
+anti-flicker guarantee therefore rests on the *action classifier's own*
+temporal requirement (`min_stow_frames`): a few-frame pose glitch never scores
+high enough to count as a positive window in the first place. If a future
+learned stage C is noisier per-window than the kinematic one, raise
+`hysteresis_n` or `window_stride` so independent (non-overlapping) evidence is
+required before escalation.
 
 ## Swapping in a real backend
 

@@ -18,14 +18,25 @@ class Detector(Protocol):
 
 
 class SyntheticDetector:
-    """Emits detections straight from a synthetic frame's ground-truth actors."""
+    """Emits detections straight from a synthetic frame's ground-truth actors.
 
-    def __init__(self, confidence: float = 0.95):
+    Stands in for the uniform/badge classifier by flagging actors whose id
+    begins with `employee_prefix` as employees — the synthetic analogue of a
+    visual uniform cue, keeping the identity-free contract (blueprint §3.4).
+    """
+
+    def __init__(self, confidence: float = 0.95, employee_prefix: str = "employee"):
         self.confidence = confidence
+        self.employee_prefix = employee_prefix
 
     def detect(self, frame: Frame) -> list[Detection]:
         return [
-            Detection(bbox=actor.bbox, confidence=self.confidence, actor_ref=actor)
+            Detection(
+                bbox=actor.bbox,
+                confidence=self.confidence,
+                is_employee=actor.actor_id.startswith(self.employee_prefix),
+                actor_ref=actor,
+            )
             for actor in frame.synthetic_actors
         ]
 
