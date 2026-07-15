@@ -45,6 +45,7 @@ class EventIn(BaseModel):
     window_end_ts: float = 0.0
     created_ts: float = 0.0
     clip: ClipRefIn | None = None
+    pose_trace: list[list[list[float]]] | None = None
 
 
 class FeedbackIn(BaseModel):

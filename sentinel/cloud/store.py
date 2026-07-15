@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
     window_start_ts REAL NOT NULL DEFAULT 0,
     window_end_ts REAL NOT NULL DEFAULT 0,
     clip TEXT,
+    pose_trace TEXT,
     created_ts REAL NOT NULL,
     received_ts REAL NOT NULL
 );
@@ -54,8 +55,8 @@ class CloudStore:
             cur = self._conn.execute(
                 "INSERT OR IGNORE INTO events (event_id, store_id, camera_id, track_id,"
                 " tier, fused_score, action_score, rule_flags, window_start_ts,"
-                " window_end_ts, clip, created_ts, received_ts)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " window_end_ts, clip, pose_trace, created_ts, received_ts)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     payload["event_id"],
                     payload["store_id"],
@@ -68,6 +69,7 @@ class CloudStore:
                     payload.get("window_start_ts", 0.0),
                     payload.get("window_end_ts", 0.0),
                     json.dumps(payload["clip"]) if payload.get("clip") else None,
+                    json.dumps(payload["pose_trace"]) if payload.get("pose_trace") else None,
                     payload.get("created_ts", time.time()),
                     time.time(),
                 ),
@@ -79,6 +81,8 @@ class CloudStore:
         event = dict(row)
         event["rule_flags"] = json.loads(event["rule_flags"])
         event["clip"] = json.loads(event["clip"]) if event["clip"] else None
+        if "pose_trace" in event:
+            event["pose_trace"] = json.loads(event["pose_trace"]) if event["pose_trace"] else None
         return event
 
     def list_events(self, tier: str | None = None, limit: int = 100) -> list[dict]:

@@ -9,3 +9,7 @@ dist/
 *.db-wal
 *.db-shm
 .env
+model_registry/
+*.onnx
+*.onnx.data
+*.pt

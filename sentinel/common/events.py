@@ -63,6 +63,11 @@ class DetectionEvent:
     event_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     created_ts: float = field(default_factory=time.time)
     clip: ClipRef | None = None
+    # The skeleton window that produced this decision — keypoints only, no
+    # identity. When an LP reviewer confirms/rejects the alert, this trace plus
+    # their verdict becomes one labeled training example (blueprint §4.2). Shape:
+    # [frame][keypoint] -> [x, y]. Optional so lightweight LOG telemetry can omit it.
+    pose_trace: list[list[list[float]]] | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

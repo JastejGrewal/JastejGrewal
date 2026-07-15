@@ -26,9 +26,39 @@ no biometric identity, skeleton/kinematics only**.
 | Real person detection: OpenCV HOG (no weights download) — stage A | `sentinel/edge/pipeline/detector.py` `HogDetector` | ✅ |
 | Real neural detection + pose: YOLO-pose (COCO-17 → 6-keypoint) — stages A+B | `sentinel/edge/pipeline/pose_yolo.py` | ✅ (needs weights) |
 | Run the pipeline on real video | `sentinel/edge/run_video.py` | ✅ |
+| **Trainable action model** (temporal CNN over skeleton windows, ONNX export) — stage C | `sentinel/ml/model.py`, `onnx_classifier.py` | ✅ |
+| Synthetic training data + frozen golden eval set — §4.5 | `sentinel/ml/dataset.py`, `features.py` | ✅ |
+| Model registry + golden-set-gated promotion — §4.2 | `sentinel/ml/registry.py` | ✅ |
+| Shadow deployment (candidate vs production) — §4.2 | `sentinel/ml/shadow.py` | ✅ |
+| Self-training loop: feedback → retrain → gate — §4.2 | `sentinel/ml/retrain.py` | ✅ |
 
-Object/context detection (stage D), the appearance-model branch, and the retraining
-pipeline are Phase 2–3 scope and are stubbed at the interface level only.
+Object/context detection (stage D) and the appearance-model branch are Phase 3 scope
+and are stubbed at the interface level only.
+
+### Training the learned model and the self-training loop
+
+The action model is a real neural net trained in-repo (no downloads — training is
+local):
+
+```bash
+pip install -e ".[train]"                    # torch + onnx (CPU is fine)
+
+# Phase 0: train the initial model, evaluate on the frozen golden set, register + promote
+python -m sentinel.ml.train_cli --registry ./model_registry
+
+# run the pipeline with the LEARNED model instead of the kinematic stand-in:
+#   EdgePipeline(action=OnnxActionClassifier("model_registry/models/action-v1.onnx", 20))
+```
+
+The **self-training loop** (`sentinel/ml/retrain.py`) closes the circle: every alert
+carries the skeleton `pose_trace` that produced it; when an LP reviewer confirms or
+rejects it on the dashboard, that trace + verdict becomes one labeled example.
+`retrain()` merges human-labeled production data with the synthetic base set, trains a
+candidate, evaluates it on the **frozen golden set**, and only promotes it if it clears
+the gate (beats the incumbent's accuracy, doesn't raise the false-positive rate). Guards
+from blueprint §4.2 are enforced in code: `unsure` verdicts never become labels, the
+golden set is never sourced from feedback, and a candidate is registered but not promoted
+unless it passes the gate.
 
 ### Running on real video
 

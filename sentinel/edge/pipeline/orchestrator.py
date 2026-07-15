@@ -160,7 +160,8 @@ class EdgePipeline:
                 continue
             self._frames_since_score[sample.track_id] = 0
 
-            action_score = self.action.score_window(list(window))
+            window_samples = list(window)
+            action_score = self.action.score_window(window_samples)
             if action_score is None:
                 continue
             self.stats.windows_scored += 1
@@ -183,6 +184,7 @@ class EdgePipeline:
                 rule_flags=decision.rule_flags,
                 window_start_ts=decision.window_start_ts,
                 window_end_ts=decision.window_end_ts,
+                pose_trace=[[[x, y] for (x, y) in s.keypoints] for s in window_samples],
             )
             if decision.tier == AlertTier.ALERT:
                 # Defer: the clip needs post-roll frames that don't exist yet.

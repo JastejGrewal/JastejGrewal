@@ -6,17 +6,31 @@ and how retrained models reach the fleet. Phase 1 implements the *feedback
 capture* and *review prioritization* halves; retraining/promotion arrives in
 Phase 2 and MUST follow the gates below.
 
-## What exists today (Phase 1)
+## What exists today
 
 - **Label source**: LP staff confirm/false-alarm/unsure dispositions via
   `POST /api/v1/alerts/{id}/feedback` (dashboard buttons). Stored in the
-  `feedback` table keyed to the full event feature trace.
+  `feedback` table keyed to the event, which carries the `pose_trace` (the
+  skeleton window that produced the decision — keypoints only, no identity).
 - **Review queue**: `GET /api/v1/review-queue` ranks unreviewed events by
   boundary confidence, novelty vs. labeled centroids, stratified sampling of
   confident negatives, and unreviewed-alert priority
   (`sentinel/cloud/active_learning.py`).
 - **Telemetry completeness**: LOG-tier events are stored alongside alerts so
   negatives exist to sample.
+- **Trainable model** (`sentinel/ml/`): a temporal CNN over skeleton windows,
+  trained on synthetic data (`dataset.py`), exported to ONNX, and served via
+  `OnnxActionClassifier` behind the same interface as the kinematic stand-in.
+- **Frozen golden set** (`dataset.golden_set`, fixed seed) — built once, never
+  sourced from feedback.
+- **Registry + gate** (`registry.py`): versioned ONNX artifacts with lineage, a
+  `production` pointer, and `golden_gate()` enforcing the accuracy floor +
+  no-FPR-regression rule before promotion.
+- **Shadow runner** (`shadow.py`): scores a candidate alongside production on
+  live windows, logging agreement/divergence without affecting alerts.
+- **Retraining** (`retrain.py`): feedback → labeled windows → merge with
+  synthetic base → train → golden-gate → register (+ promote if gated). The
+  §4.2 guards below are enforced in code and covered by `tests/test_ml.py`.
 
 ## Non-negotiable gates for Phase 2 retraining (from blueprint §4.2)
 
