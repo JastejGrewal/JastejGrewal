@@ -30,6 +30,10 @@ class IoUTracker:
         # (fixes the unbounded-growth leak in a 24/7 process).
         self.dropped_ids: list[int] = []
 
+    @property
+    def active_ids(self) -> set[int]:
+        return set(self._tracks)
+
     def update(self, detections: list[Detection], ts: float) -> list[TrackedPerson]:
         self.dropped_ids = []
         # Greedy matching: highest-IoU (track, detection) pairs first.

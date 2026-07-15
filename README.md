@@ -22,8 +22,43 @@ no biometric identity, skeleton/kinematics only**.
 | Active-learning review-queue prioritization — §4.2 | `sentinel/cloud/active_learning.py` | ✅ |
 | End-to-end demo (synthetic store: normal shopper vs. concealment actor) | `sentinel/edge/demo.py` | ✅ |
 
+| Real video ingestion (OpenCV file/RTSP decode) | `sentinel/edge/ingest/video.py` | ✅ |
+| Real person detection: OpenCV HOG (no weights download) — stage A | `sentinel/edge/pipeline/detector.py` `HogDetector` | ✅ |
+| Real neural detection + pose: YOLO-pose (COCO-17 → 6-keypoint) — stages A+B | `sentinel/edge/pipeline/pose_yolo.py` | ✅ (needs weights) |
+| Run the pipeline on real video | `sentinel/edge/run_video.py` | ✅ |
+
 Object/context detection (stage D), the appearance-model branch, and the retraining
 pipeline are Phase 2–3 scope and are stubbed at the interface level only.
+
+### Running on real video
+
+The pipeline runs on real decoded video, not just synthetic actors:
+
+```bash
+pip install -e ".[dev]"                                  # opencv + scikit-image
+
+# make a real .mp4 (composites a real person photo — no download needed)
+python -m sentinel.edge.render_demo_video --out /tmp/store.mp4
+
+# real decode -> real HOG person detection -> tracker -> pipeline
+python -m sentinel.edge.run_video --source /tmp/store.mp4 --backend hog
+```
+
+Two real perception backends, chosen by what your environment can reach:
+
+- **`hog`** — OpenCV's built-in HOG person detector. Real CV, **no model
+  download**, so it runs anywhere. It has no pose model, so it exercises
+  *decode → detect → track → pipeline* on real pixels but not the pose-dependent
+  action/alert stages.
+- **`yolo-pose`** — a real neural net (Ultralytics YOLO-pose) that does person
+  detection **and** COCO-17 pose in one pass, running the **full** pipeline
+  (incl. gesture/action/alerts) on real pixels. It needs the model weights,
+  which are fetched from the vendor's host on first use — available on any
+  network with normal outbound access. The COCO-17 → 6-keypoint mapping is
+  unit-tested independently of the weights (`test_real_perception.py`).
+
+Point `--source` at an `rtsp://…` URL (resolved via the discovery adapter in
+§4.3a) to run against a real camera instead of a file.
 
 ## Quickstart
 
