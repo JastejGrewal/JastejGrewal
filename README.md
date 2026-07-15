@@ -30,7 +30,9 @@ no biometric identity, skeleton/kinematics only**.
 | Synthetic training data + frozen golden eval set — §4.5 | `sentinel/ml/dataset.py`, `features.py` | ✅ |
 | Model registry + golden-set-gated promotion — §4.2 | `sentinel/ml/registry.py` | ✅ |
 | Shadow deployment (candidate vs production) — §4.2 | `sentinel/ml/shadow.py` | ✅ |
+| Canary rollout: deterministic camera slice, auto-rollback — §4.2 | `sentinel/ml/canary.py` | ✅ |
 | Self-training loop: feedback → retrain → gate — §4.2 | `sentinel/ml/retrain.py` | ✅ |
+| Model OTA: cloud serves production ONNX, edge pulls + hot-swaps — §4.6 | `sentinel/cloud/app.py` model endpoints, `sentinel/edge/model_sync.py` | ✅ |
 
 Object/context detection (stage D) and the appearance-model branch are Phase 3 scope
 and are stubbed at the interface level only.
@@ -126,6 +128,23 @@ python -m sentinel.edge.discovery.cli --subnet 192.168.1.0/24
   pipeline architecture is exercised end-to-end without a GPU.
 - **Offline-first edge**: alerts and events queue durably through connectivity loss and
   batch-sync on reconnect (blueprint §4.3 — a Phase 1 requirement, not an afterthought).
+
+## Project status
+
+**The software vertical is complete and verified end-to-end** (100 passing tests):
+camera discovery → real video decode → real detection/tracking → learned
+concealment model → rules/fusion → offline-tolerant sync → cloud API + dashboard
+→ human feedback → golden-set-gated retraining → shadow/canary rollout → OTA back
+to the edge. The full loop has been exercised live: a model trained from scratch,
+distributed to an edge box over the API, alerting on a concealment scenario,
+confirmed by a reviewer, and a retrained successor passing the gate and taking
+over production.
+
+What separates this from a deployed product is **the physical world, not code**:
+real theft footage to replace the synthetic training generator (`sentinel/ml/dataset.py`
+is the only module that changes), YOLO-pose weights on a network with normal
+egress, edge hardware (Jetson/Hailo) with a pilot store, and the legal/DPIA
+work laid out in `docs/veesion-clone-blueprint.md` §5.
 
 ## Repository layout
 

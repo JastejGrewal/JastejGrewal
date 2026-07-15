@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from sentinel.common.events import AlertTier, FeedbackVerdict
@@ -19,10 +19,21 @@ from .store import CloudStore
 
 app = FastAPI(title="Sentinel Cloud", version="0.1.0")
 _store = CloudStore(db_path=os.environ.get("SENTINEL_DB", ":memory:"))
+# Model registry root for OTA distribution (§4.2 rollout / §4.6 "OTA push").
+# Unset -> the model endpoints report 404 and edges keep their current model.
+_registry_root = os.environ.get("SENTINEL_REGISTRY")
 
 
 def get_store() -> CloudStore:
     return _store
+
+
+def get_registry():
+    if not _registry_root:
+        return None
+    from sentinel.ml.registry import ModelRegistry
+
+    return ModelRegistry(_registry_root)
 
 
 class ClipRefIn(BaseModel):
@@ -105,6 +116,32 @@ def review_queue(limit: int = Query(default=50, ge=1, le=500)) -> list[dict]:
 @app.get("/api/v1/stats")
 def stats() -> dict:
     return get_store().stats()
+
+
+@app.get("/api/v1/models/production")
+def production_model_info() -> dict:
+    registry = get_registry()
+    prod = registry.production() if registry else None
+    if not prod:
+        raise HTTPException(status_code=404, detail="no production model")
+    return {
+        "version": prod["version"],
+        "metrics": prod["metrics"],
+        "created_ts": prod["created_ts"],
+    }
+
+
+@app.get("/api/v1/models/production/artifact")
+def production_model_artifact() -> FileResponse:
+    registry = get_registry()
+    prod = registry.production() if registry else None
+    if not prod:
+        raise HTTPException(status_code=404, detail="no production model")
+    return FileResponse(
+        prod["path"],
+        media_type="application/octet-stream",
+        filename=f"{prod['version']}.onnx",
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

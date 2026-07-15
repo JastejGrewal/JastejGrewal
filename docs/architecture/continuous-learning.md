@@ -54,6 +54,27 @@ Phase 2 and MUST follow the gates below.
    (and clothing-style proxies, carefully) must not regress. This is the
    operational hedge against the FTC/Rite-Aid theory of harm (blueprint §5).
 
+## Rollout ladder — implemented
+
+The full §4.2 promotion ladder now exists in code:
+
+1. **Golden gate** (`registry.golden_gate`): absolute accuracy floor + no
+   accuracy loss vs. incumbent + no false-positive-rate increase beyond
+   tolerance. A candidate that fails is registered (for lineage) but never
+   promoted.
+2. **Shadow** (`shadow.ShadowRunner`): candidate scores live windows alongside
+   production; only agreement/divergence is recorded, alerts are unaffected.
+3. **Canary** (`canary.CanaryController`): deterministic hash-of-camera-id
+   slice (default 5%) alerts on the candidate; live confirm/false-alarm rates
+   are compared canary-vs-control with an evidence floor, an early-rollback
+   trigger for egregious noise, and a false-alarm-rate regression bound.
+   `unsure` dispositions contribute no evidence, mirroring the label rule.
+4. **OTA distribution** (`cloud/app.py` model endpoints + `edge/model_sync.py`):
+   the edge polls the cloud's production-model endpoint, downloads on version
+   change, verifies the artifact loads before swapping, and keeps the current
+   model on any failure — a box that never syncs still detects with whatever
+   classifier it booted with.
+
 ## Ensemble disagreement (Phase 3)
 
 When the appearance branch lands, add branch-disagreement as a first-class
